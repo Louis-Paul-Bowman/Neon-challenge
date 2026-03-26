@@ -1,6 +1,7 @@
 services:
   llm:
     container_name: llm
+    image: llm:debug
     environment:
       - OLLAMA_MODEL=qwen2.5:3b
     ports:
@@ -10,6 +11,7 @@ services:
 
   agent:
     container_name: agent
+    image: agent:debug
     build: ./microservices/agent
     ports:
       - "3000:3000"
