@@ -16,3 +16,4 @@ Add "Crew Manifest Transmissions" functionality to the agent: Add a tool which r
 Add "Transmission verification" functionality to the agent: Add in-memory storage mechanism from LangChain. Update the input schema to take an optional thread_id (uuid4) param to enable recall.
 Use the LangChain native MemorySaver checkpointer instead of homerolling the memory. Also, you can save all previous messages, not just the manifest task ones.
 TypeError: create_react_agent() got unexpected keyword arguments: {'state_modifier': 'You are an AI agent responding to mission control (NEON).\nYou have access to tools. Use them when needed, then stop calling tools once you have the answer.'}
+The agent is not correctly fetching previous conversations when a thread_id param is passed.

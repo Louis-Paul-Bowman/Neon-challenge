@@ -6,7 +6,7 @@ import logging
 
 from requests import post, get
 from langchain_anthropic import ChatAnthropic
-from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.tools import tool
 from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.memory import MemorySaver
@@ -44,6 +44,7 @@ Craft your answer to naturally fit within the required length."""
 
 # --- Tools -------------------------------------------------------------------
 
+
 @tool
 def eval_math_expression(expression: str) -> float:
     """Evaluate a mathematical expression. Pass the expression EXACTLY as given
@@ -59,8 +60,12 @@ def eval_math_expression(expression: str) -> float:
 def get_wikipedia_word(title: str, position: int) -> str:
     """Fetch the word at a given position (1-indexed) from a Wikipedia article summary.
     Use the article title exactly as mentioned in the prompt."""
-    logger.debug("get_wikipedia_word called with: title=%s position=%d", title, position)
-    resp = get(f"{BACKEND_URL}/wiki", params={"title": title, "position": position}, timeout=10)
+    logger.debug(
+        "get_wikipedia_word called with: title=%s position=%d", title, position
+    )
+    resp = get(
+        f"{BACKEND_URL}/wiki", params={"title": title, "position": position}, timeout=10
+    )
     resp.raise_for_status()
     return resp.json()["result"]
 
@@ -102,6 +107,7 @@ def _is_handshake(prompt: str) -> bool:
 
 # --- Length coercion (Task D) ------------------------------------------------
 
+
 def _parse_length_constraint(prompt: str) -> tuple[int | None, int | None]:
     """Return (min_len, max_len) parsed from the prompt. Either may be None."""
     lower = prompt.lower()
@@ -115,7 +121,9 @@ def _parse_length_constraint(prompt: str) -> tuple[int | None, int | None]:
         return int(between.group(1)), int(between.group(2))
 
     min_match = re.search(r"at\s+least\s+(\d+)\s+characters?", lower)
-    max_match = re.search(r"(?:no\s+more\s+than|at\s+most)\s+(\d+)\s+characters?", lower)
+    max_match = re.search(
+        r"(?:no\s+more\s+than|at\s+most)\s+(\d+)\s+characters?", lower
+    )
     min_len = int(min_match.group(1)) if min_match else None
     max_len = int(max_match.group(1)) if max_match else None
     return min_len, max_len
@@ -133,6 +141,7 @@ def _coerce_length(text: str, min_len: int | None, max_len: int | None) -> str:
 
 # --- Agent loop --------------------------------------------------------------
 
+
 def process_prompt(prompt: str, thread_id: str | None = None) -> dict:
     if _is_handshake(prompt):
         return {"type": "enter_digits", "digits": VESSEL_CODE}
@@ -146,18 +155,24 @@ def process_prompt(prompt: str, thread_id: str | None = None) -> dict:
     # Extract tool results from the current turn (messages after the last
     # HumanMessage) to give the formatter accurate context.
     messages = state["messages"]
-    last_human_idx = max(i for i, m in enumerate(messages) if isinstance(m, HumanMessage))
-    current_tool_results = [m for m in messages[last_human_idx:] if isinstance(m, ToolMessage)]
+    last_human_idx = max(
+        i for i, m in enumerate(messages) if isinstance(m, HumanMessage)
+    )
+    current_tool_results = [
+        m for m in messages[last_human_idx:] if isinstance(m, ToolMessage)
+    ]
 
     context = f"Original prompt: {prompt}"
     if current_tool_results:
         results_str = "\n".join(f"- {m.content}" for m in current_tool_results)
         context += f"\n\nTool results:\n{results_str}"
 
-    format_response = formatter_llm.invoke([
-        SystemMessage(content=FORMAT_SYSTEM_PROMPT),
-        HumanMessage(content=context),
-    ])
+    format_response = formatter_llm.invoke(
+        [
+            SystemMessage(content=FORMAT_SYSTEM_PROMPT),
+            HumanMessage(content=context),
+        ]
+    )
 
     result = json.loads(format_response.content)
 
@@ -165,6 +180,20 @@ def process_prompt(prompt: str, thread_id: str | None = None) -> dict:
         min_len, max_len = _parse_length_constraint(prompt)
         if min_len is not None or max_len is not None:
             result["text"] = _coerce_length(result["text"], min_len, max_len)
-            logger.debug("Coerced text length to %d (min=%s max=%s)", len(result["text"]), min_len, max_len)
+            logger.debug(
+                "Coerced text length to %d (min=%s max=%s)",
+                len(result["text"]),
+                min_len,
+                max_len,
+            )
+
+    # Store the final formatted answer back into the agent's thread so Task E
+    # can recall words from previous Task D responses via the same thread_id.
+    if thread_id and result.get("type") == "speak_text":
+        agent.update_state(
+            config,
+            {"messages": [AIMessage(content=f"My response was: {result['text']}")]},
+        )
+        logger.debug("Stored formatted answer in thread %s", thread_id)
 
     return result
