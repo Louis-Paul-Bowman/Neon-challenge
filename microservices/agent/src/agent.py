@@ -3,15 +3,14 @@ import os
 import logging
 
 from requests import post
-from langchain_ollama import ChatOllama
+from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langchain_core.tools import tool
 
 logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
 logger = logging.getLogger("Agent")
 
-LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "http://llm:11434")
-MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5:7b")
+MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-6")
 BACKEND_URL = os.environ.get("BACKEND_URL", "http://backend:4000")
 
 VESSEL_CODE = "32ebf047628f89ab"
@@ -46,11 +45,8 @@ def eval_math_expression(expression: str) -> float:
 TOOLS = [eval_math_expression]
 TOOLS_BY_NAME = {t.name: t for t in TOOLS}
 
-# Tool-calling LLM — format="json" must be omitted, it conflicts with tool use.
-llm = ChatOllama(base_url=LLM_BASE_URL, model=MODEL).bind_tools(TOOLS)
-
-# Formatter LLM — only produces the final Neon JSON, no tool calls needed.
-formatter_llm = ChatOllama(base_url=LLM_BASE_URL, model=MODEL, format="json")
+llm = ChatAnthropic(model=MODEL).bind_tools(TOOLS)
+formatter_llm = ChatAnthropic(model=MODEL)
 
 # --- Handshake (Task A) ------------------------------------------------------
 

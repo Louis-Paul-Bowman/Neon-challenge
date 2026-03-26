@@ -1,4 +1,4 @@
-langchain-ollama
+langchain-anthropic
 langchain-core
 fastapi
 uvicorn

@@ -7,3 +7,4 @@ Implement the backend tool for evaluating mathematical expressions. 1 Create a b
 Add the backend math evaluation endpoint (backend:4000/eval) as a callable tool to the agent.
 Our llm microservice did not automatically pull the model we wanted. Upon trying to use the agent, got error: ollama._types.ResponseError: model 'qwen2.5:3b' not found (status code: 404)
 The agent called the math eval tool, but made two mistakes: 1. for the test input 'Math.floor((7 * 3 + 2) / 5)' it only selected the numerical section to evaluate, not the Math.floor part. Additionally, it did not respect our output format: twice it failed to generate decodable JSON, and once {'type': 'speak_text', 'text': 'The result of 3 modulo 2 is 1.'} where the text result is too verbose.
+The local models are misbehaving, we can revisit them later. For now, change our agent code and environment variables to use Claude API instead.

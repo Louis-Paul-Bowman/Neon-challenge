@@ -1,20 +1,23 @@
 services:
-  llm:
-    container_name: llm
-    image: llm:debug
-    environment:
-      - OLLAMA_MODEL=qwen2.5:7b
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
+  ## Open-source local LLMs tested were not powerful enough to do well on math task.
+  ## Could revisit this in the future and test on more models. For the sake of time,
+  ## currently swapped to Anthropic paid model via API.
+  # llm:
+  #   container_name: llm
+  #   image: llm:debug
+  #   environment:
+  #     - OLLAMA_MODEL=qwen2.5:7b
+  #   ports:
+  #     - "11434:11434"
+  #   volumes:
+  #     - ollama_data:/root/.ollama
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: all
+  #             capabilities: [gpu]
 
   agent:
     container_name: agent
@@ -23,11 +26,10 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - LLM_BASE_URL=http://llm:11434
-      - OLLAMA_MODEL=qwen2.5:7b
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - BACKEND_URL=http://backend:4000
+      - CLAUDE_MODEL=claude-sonnet-4-6
     depends_on:
-      - llm
       - backend
 
   backend:
