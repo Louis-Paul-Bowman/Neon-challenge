@@ -1,10 +1,18 @@
 import json
 import os
+import logging
 
 from requests import post
 from langchain_ollama import ChatOllama
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langchain_core.tools import tool
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    handlers=[logging.StreamHandler()],
+)
+
+logger = logging.getLogger("Agent")
 
 LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "http://llm:11434")
 MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5:3b")
@@ -25,6 +33,7 @@ Valid response formats:
 def eval_math_expression(expression: str) -> float:
     """Evaluate a mathematical expression containing numbers, +, -, *, /, %,
     parentheses, and Math.floor. Returns the numeric result."""
+    logger.debug(f"AGENT CALLED MATH EVAL TOOL WITH EXPRESSION '{expression}'.")
     resp = post(f"{BACKEND_URL}/eval", json={"expression": expression}, timeout=10)
     resp.raise_for_status()
     return resp.json()["result"]
