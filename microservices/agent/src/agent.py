@@ -4,7 +4,6 @@ import re
 import uuid
 import logging
 
-from pydantic import BaseModel
 from requests import post, get
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage
@@ -12,6 +11,7 @@ from langchain_core.tools import tool
 from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.memory import MemorySaver
 
+from schemas import PromptRequest
 from Docs import PLAINTEXT_CV
 
 logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
@@ -49,18 +49,6 @@ Memory: your previous JSON responses are visible in the conversation history.
 If asked to recall a specific word from a previous answer, look at the "text"
 field of the relevant earlier {"type": "speak_text", ...} message.
 Always respond with valid JSON only, do not include any explanation, reasoning, or text outside the JSON object."""
-
-
-# --- API Definitions ----------------------------------------------------------
-class Scrambled(BaseModel):
-    word: str
-    timestamp: int
-
-
-class InvokeRequest(BaseModel):
-    type: str | None = None
-    prompt: str | list[Scrambled]
-    thread_id: str | None = None
 
 
 # --- Tools -------------------------------------------------------------------
@@ -165,17 +153,17 @@ def _coerce_length(text: str, min_len: int | None, max_len: int | None) -> str:
 # --- Input unscrambling ------------------------------------------------------
 
 
-def decode_message(request: InvokeRequest) -> str:
-    if request.type == "challenge" and isinstance(request.message, list):
-        words = sorted(request.message, key=lambda w: w.timestamp)
+def decode_message(request: PromptRequest) -> str:
+    if request.type == "challenge" and isinstance(request.prompt, list):
+        words = sorted(request.prompt, key=lambda w: w.timestamp)
         return " ".join(w.word for w in words)
-    return request.message
+    return request.prompt
 
 
 # --- Agent loop --------------------------------------------------------------
 
 
-def process_prompt(request: InvokeRequest) -> dict:
+def process_prompt(request: PromptRequest) -> dict:
     thread_id = request.thread_id
     prompt = decode_message(request)
     logger.debug("Unscrambled prompt: %s", prompt)

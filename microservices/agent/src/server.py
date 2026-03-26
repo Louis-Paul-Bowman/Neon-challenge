@@ -2,20 +2,16 @@ import os
 
 import uvicorn
 from fastapi import FastAPI
-from pydantic import BaseModel, Field
 from agent import process_prompt
+
+from schemas import PromptRequest
 
 app = FastAPI()
 
 
-class PromptRequest(BaseModel):
-    prompt: str
-    thread_id: str | None = Field(default=None, description="UUID4 session ID for recall across turns")
-
-
 @app.post("/process")
 def process(req: PromptRequest):
-    return process_prompt(req.prompt, thread_id=req.thread_id)
+    return process_prompt(req)
 
 
 if __name__ == "__main__":
