@@ -29,6 +29,8 @@ services:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - BACKEND_URL=http://backend:4000
       - CLAUDE_MODEL=claude-sonnet-4-6
+      - NEON_CONNECT=0
+      - NEON_WS_URL=wss://neonhealth.software/agent-puzzle/challenge
     depends_on:
       - backend
 
