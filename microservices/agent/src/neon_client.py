@@ -46,11 +46,17 @@ def run(max_turns: int = DEFAULT_MAX_TURNS) -> None:
             request = PromptRequest(type=type_, prompt=prompt, thread_id=thread_id)
 
             unscrambled = decode_message(request)
-
             print("Received message:\n", unscrambled)
 
             response = process_prompt(request)
         except Exception:
+            parsed = json.loads(raw)
+            type_ = parsed.get("type")
+            prompt = parsed.get("message")
+
+            request = PromptRequest(type=type_, prompt=prompt, thread_id=thread_id)
+
+            unscrambled = decode_message(request)
             logger.exception("Failed to process message: %s", unscrambled)
             ws.close()
             return
