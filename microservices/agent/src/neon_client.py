@@ -43,6 +43,11 @@ def run(max_turns: int = DEFAULT_MAX_TURNS) -> None:
             type_ = parsed.get("type")
             prompt = parsed.get("message")
 
+            if type_ == "success":
+                print("Hooray!")
+                ws.close()
+                return
+
             request = PromptRequest(type=type_, prompt=prompt, thread_id=thread_id)
 
             unscrambled = decode_message(request)
