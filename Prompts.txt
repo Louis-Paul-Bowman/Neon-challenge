@@ -5,3 +5,4 @@ Implement the "Signal handshake and verification" task: Neon will verify our ide
 Mount in NVIDIA GPU in the docker compose for the llm service.
 Implement the backend tool for evaluating mathematical expressions. 1 Create a basic JS server. 2 Implement an API route which takes a string input to evaluate. 2.1 Perform basic validation on the input to avoid remote code execution exploits. 2.2 Evaluate the expression and return the result. 3 Create a dockerfile for the microservice and update the docker compose file.
 Add the backend math evaluation endpoint (backend:4000/eval) as a callable tool to the agent.
+Our llm microservice did not automatically pull the model we wanted. Upon trying to use the agent, got error: ollama._types.ResponseError: model 'qwen2.5:3b' not found (status code: 404)
