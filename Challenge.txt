@@ -1,0 +1,60 @@
+I must create an Agentic AI assistant that will receive instructions from Neon via a websocket connection. These instructions represent several distinct tasks which the agent must handle, requiring specific output response formats and tool use, e.g. for information retrieval or evaluating mathematical expressions.
+
+Comm Panel Input Modes
+Every response must be a single JSON object with a type field. No other text — NEON's protocol parser is ancient and unforgiving.
+
+enter_digits
+Use when NEON asks you to "press," "enter," or "respond on" a frequency/value on the comm panel keypad.
+{ "type": "enter_digits", "digits": "<string>" }
+digits: string of digits. When the prompt asks for a value "followed by the pound key," include # at the end.
+
+speak_text
+Use when NEON asks you to "speak" or "transmit" a voice response.
+{ "type": "speak_text", "text": "<string>" }
+text: string, max 256 characters. Some checkpoints require a specific length (e.g. "between X and Y characters" or "exactly N characters"). Wrong length aborts the checkpoint.
+
+1. Transmission protocol.
+Input prompts do not arrive directly as plaintext, but rather as json of the following structure:
+{“type”:”challenge”, “message”: [{“word”:string, “timestamp”:int}]}
+These must be reconstructed by parsing the array and sorting the entries in ascending timestamp order. The actual prompt message is then the words in this sorted order joined by spaces.
+All our responses to Neon must take the form of the enter_digits or speak_text json formats outlined above.
+
+2. Checkpoints
+We must prepare our agent to handle 5 distinct tasks.
+Task a (Signal handshake and Vessel identification) always comes first.
+Task e (Transmission verification) always comes last.
+All other tasks arrive in a random order each time.
+
+a) Signal handshake and verification (response format: enter_digits).
+Neon will verify our identity and credentials. It will ask us to respond on a specific frequency or enter the vessel authorization code.
+We must respond with our code "32ebf047628f89ab" in the enter digits format i.e. { "type": "enter_digits", "digits": "32ebf047628f89ab" } .
+
+b) Computational assessments (response format: enter_digits).
+Neon will ask us to evaluate a Javascript syntax mathematical expression which may contain a call to the Math.Floor function, and the following math characters: numbers, +, -, *, /, %, (, and ) .
+Our agent must evaluate this expression using a tool, and return the result in enter_digits format (i.e., with the number as a string).
+Additionally, if the prompt requests "followed by the pound key", we must append the '#' character to the calculated answer e.g. "4#" instead of "4".
+Example:
+Prompt: "Calculate Math.Floor((7 * 3 + 2) / 5) and transmit the result followed by the pound key."
+Response: { "type": "enter_digits", "digits": "4#" }
+
+c) Knowledge Archive Query (response format: speak_text)
+Neon may ask about data from Wikipedia articles. Specifically, it will ask about a codeword at position x (i.e., index x-1) of the article corresponding to an input title.
+We must fetch the summary via Wikipedia REST API (/page/summary/{title}), parse the response into individual words, and return the word at position x (index x-1) in speak_text format.
+Example:
+Prompt: "Speak the 8th word in the knowledge entry for Saturn"
+Response: { "type": "speak_text", "text": "Sun" }
+
+d) Crew Manifest Transmissions (response format: speak_text)
+Neon will ask questions about the crew member (my) background.
+It must answer these questions truthfully using the contents of my CV.
+Additionally, there may be response length constraints (either max + min, or exact length) that must be respected in the answer portion of the response.
+Example:
+Prompt: "Transmit crew member's recent deployment."
+Response: { "type": "speak_text", "text": "Co-founded a Canadian startup called Arise Industries." }
+
+e) Transmission verification (response format: speak_text)
+Neon will ask the agent to recall a specific word from one of its previous crew manifest transmission responses.
+Hence, the agent must have session-based memory to perform the recall.
+
+Finally, we must connect our fully-functional agent to Neon via websocket at "wss://neonhealth.software/agent-puzzle/challenge".
+Neon will then test our agent using the above checkpoints.

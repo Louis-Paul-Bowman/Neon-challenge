@@ -1,0 +1,75 @@
+1. The system should be split into three microservices:
+ a) An agent microservice which defines the desired behaviors
+ b) An LLM microservice which powers the agent microservice
+ c) A backend microservice which implements tools for the agent such as the math evaluation and Wikipedia data fetching.
+
+2. Create an LLM microservice which will power our agent.
+2.1 Create a local Ollama instance.
+2.2 Pull a lightweight LLM model that supports tool use and our JSON output formats.
+2.3 Create a dockerfile for the microservice and a top-level docker compose. 
+If the local model does not work well, we can try a more powerful paid model i.e. OpenAI / Anthropic.
+
+3. Create the beginning agent microservice.
+3.1 Stand up a basic LangChain agent and connect it to our LLM microservice.
+3.2 Implement the "Signal handshake and verification" task.
+3.2.1 Neon will verify our identity and credentials. It will ask us to respond on a specific frequency or enter the vessel authorization code.
+We must respond with our code "32ebf047628f89ab" in the enter digits format i.e. { "type": "enter_digits", "digits": "32ebf047628f89ab" } .
+3.3 Create a dockerfile for the microservice and update the docker compose file.
+3.4 Add a basic test which validates the "Signal handshake and verification" functionality on test inputs.
+
+4. Implement the backend tool for evaluating mathematical expressions.
+4.1 Create a basic JS server.
+4.2 Implement an API route which takes a string input to evaluate.
+4.2.1 Perform basic validation on the input to avoid remote code execution exploits.
+4.2.2 Evaluate the expression and return the result.
+4.3 Create a dockerfile for the microservice and update the docker compose file.
+4.4 Build the microservice image, and spin up the server.
+4.5 Add a basic test which validates the math eval tool functionality on test inputs.
+
+5. Add the "Computational assessments" functionality to the agent
+5.1 Add the math eval tool end-point to the agent microservice.
+5.2 Add a basic test which validates the "Computational assessments" functionality on test inputs:
+Example:
+Prompt: "Calculate Math.Floor((7 * 3 + 2) / 5) and transmit the result followed by the pound key."
+Response: { "type": "enter_digits", "digits": "4#" }
+
+6. Implement the backend tool for querying Wikipedia
+6.1 Add a new endpoint to the backend microservice which takes two inputs: a title (string) and position (int).
+This endpoint should then retrieve the text of the Wikipedia article with the corresponding title from the Wikipedia REST endpoint at /page/summary/{title}, split it into individual words, and return the word at position x (i.e., index x-1).
+6.2 Add a basic test which validates Wikipedia word fetch tool functionality on test inputs.
+
+7. Add Knowledge Archive Query functionality to the agent.
+7.1 Add the Wikipedia tool end-point to the agent microservice.
+7.2 Add a basic test which validates the "Archive Query" functionality on test inputs:
+Example:
+Prompt: "Speak the 8th word in the knowledge entry for Saturn"
+Response: { "type": "speak_text", "text": "Sun" }
+
+8. Add "Crew Manifest Transmissions" functionality to the agent.
+8.1 Add a plaintext version of my CV as a constant that the LLM can query.
+8.2 Add a tool which returns this plaintext CV data for this task.
+8.3 Ensure the model respects content length restrictions, add this to the prompt and add a validator / coercion (truncate / pad).
+8.4 Add a basic test which validates the "Crew Manifest Transmissions" functionality on test inputs:
+Example:
+Prompt: "Transmit crew member's recent deployment."
+Response: { "type": "speak_text", "text": "Co-founded a Canadian startup called Arise Industries." }
+
+9. Add "Transmission verification" functionality to the agent.
+9.1 Add in-memory storage mechanism from LangChain.
+9.2 Update the input schema to take an optional thread_id (uuid4) param to enable recall.
+9.3 Add a basic test which validates the "Transmission verification" functionality on test inputs.
+
+10. Transmission protocol unscrable.
+10.1 Add a pre-processing step to the LLM that re-constructs the inputs to a plaintext prompt.
+{“type”:”challenge”, “message”: [{“word”:string, “timestamp”:int}]}
+10.1.1 De-serialize input json.
+10.1.2 Read message field, and sort array by asencing timestamp.
+10.1.3. Join sorted list on space character.
+10.2 Add a basic test which validates the unscrable functionality on test inputs.
+
+11. Liftoff!
+11.1 Implement a functionality to connect our agent to Neon via websocket at "wss://neonhealth.software/agent-puzzle/challenge".
+11.2 Debug any failed checkpoints.
+11.3 Drink a diet coke and enter cryogenic stasis?
+11.4 ??
+11.5 Profit
