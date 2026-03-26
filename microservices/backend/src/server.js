@@ -81,7 +81,7 @@ app.get('/wiki', async (req, res) => {
       return res.status(422).json({ error: `Position ${pos} out of range (article has ${words.length} words)` });
     }
 
-    res.json({ word: words[index] });
+    res.json({ result: words[index] });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
