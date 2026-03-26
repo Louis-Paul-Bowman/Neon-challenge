@@ -38,7 +38,9 @@ def run(max_turns: int = DEFAULT_MAX_TURNS) -> None:
             return
 
         try:
-            request = PromptRequest(prompt=raw, thread_id=thread_id)
+            parsed = json.loads(raw)
+
+            request = PromptRequest(**parsed, thread_id=thread_id)
             response = process_prompt(request)
         except Exception:
             logger.exception("Failed to process message: %s", raw)
@@ -52,7 +54,9 @@ def run(max_turns: int = DEFAULT_MAX_TURNS) -> None:
     def on_error(ws: websocket.WebSocketApp, error: Exception) -> None:
         logger.error("WebSocket error: %s", error)
 
-    def on_close(ws: websocket.WebSocketApp, close_status_code: int, close_msg: str) -> None:
+    def on_close(
+        ws: websocket.WebSocketApp, close_status_code: int, close_msg: str
+    ) -> None:
         logger.info(
             "Connection closed  status=%s  msg=%s  turns_used=%d",
             close_status_code,
