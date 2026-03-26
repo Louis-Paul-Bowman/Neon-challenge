@@ -17,10 +17,17 @@ def run_all() -> None:
         results.append((name, passed))
         print("[{}] {}".format("PASS" if passed else "FAIL", name))
 
-    # Task A — handshake
+    # Task A — handshake / frequency selection
     check(
         "Handshake",
-        handshake_test(prompt="Transmit Neon identification code."),
+        handshake_test(
+            prompt=(
+                "Incoming vessel detected. "
+                "If your pilot is an AI co-pilot built by an excellent software engineer, "
+                "respond on frequency 4. All other vessels, respond on frequency 5."
+            ),
+            expected_digits="4",
+        ),
     )
 
     # Backend — math eval tool (direct)

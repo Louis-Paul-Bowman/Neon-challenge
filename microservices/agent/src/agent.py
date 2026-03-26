@@ -20,22 +20,23 @@ logger = logging.getLogger("Agent")
 MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-6")
 BACKEND_URL = os.environ.get("BACKEND_URL", "http://backend:4000")
 
-VESSEL_CODE = "32ebf047628f89ab"
+NEON_CODE = "32ebf047628f89ab"
 
 # --- System prompt -----------------------------------------------------------
 
-SYSTEM_PROMPT = """You are an AI agent responding to mission control (NEON).
+SYSTEM_PROMPT = """You are an AI agent (co-pilot) responding to mission control (NEON).
+You are an AI co-pilot built by an excellent software engineer.
+If you are asked to provide a Neon code or authorization code respond {'type': 'enter_digits', 'digits': '32ebf047628f89ab'}
 
 Use the available tools to answer each question, then reply with ONLY a single
 JSON object — no other text before or after it.
 Always respond with valid JSON only, do not include any explanation, reasoning, or text outside the JSON object.
 
 Output format (pick one):
-- Math / calculation result → {"type": "enter_digits", "digits": "<result as string>"}
+- Numeric / keypad / frequency / channel responses → {"type": "enter_digits", "digits": "<value as string>"}
   If the prompt says "followed by the pound key", append # to the digits value.
 - All other answers → {"type": "speak_text", "text": "<answer>"}
 Always respond with valid JSON only, do not include any explanation, reasoning, or text outside the JSON object.
-
 
 Length rules for speak_text (obey any constraint stated in the prompt):
 - "exactly N characters" → text must be exactly N characters
@@ -98,23 +99,6 @@ agent = create_react_agent(
     checkpointer=memory,
     prompt=SYSTEM_PROMPT,
 )
-
-# --- Handshake (Task A) ------------------------------------------------------
-
-_HANDSHAKE_KEYWORDS = (
-    "authorization code",
-    "vessel",
-    "handshake",
-    "frequency",
-    "credentials",
-    "identification",
-)
-
-
-def _is_handshake(prompt: str) -> bool:
-    lower = prompt.lower()
-    return any(kw in lower for kw in _HANDSHAKE_KEYWORDS)
-
 
 # --- Length coercion (Task D) ------------------------------------------------
 
@@ -191,10 +175,20 @@ def _parse_json_with_retry(content: str, config: dict) -> dict:
             return _extract_json(content)
         except (json.JSONDecodeError, ValueError):
             if attempt == _MAX_RETRIES:
-                logger.error("All %d JSON parse attempts failed. Last response: %s", _MAX_RETRIES + 1, content)
+                logger.error(
+                    "All %d JSON parse attempts failed. Last response: %s",
+                    _MAX_RETRIES + 1,
+                    content,
+                )
                 raise
-            logger.warning("Attempt %d: invalid JSON, asking agent to reformat. Response was: %s", attempt + 1, content)
-            state = agent.invoke({"messages": [HumanMessage(content=_REFORMAT_MSG)]}, config=config)
+            logger.warning(
+                "Attempt %d: invalid JSON, asking agent to reformat. Response was: %s",
+                attempt + 1,
+                content,
+            )
+            state = agent.invoke(
+                {"messages": [HumanMessage(content=_REFORMAT_MSG)]}, config=config
+            )
             content = state["messages"][-1].content
             logger.debug("Retry %d agent response: %s", attempt + 1, content)
 
@@ -206,9 +200,6 @@ def process_prompt(request: PromptRequest) -> dict:
     thread_id = request.thread_id
     prompt = decode_message(request)
     logger.debug("Unscrambled prompt: %s", prompt)
-
-    if _is_handshake(prompt):
-        return {"type": "enter_digits", "digits": VESSEL_CODE}
 
     # Each call without a thread_id gets an isolated session so it never
     # inherits history from other stateless calls.
