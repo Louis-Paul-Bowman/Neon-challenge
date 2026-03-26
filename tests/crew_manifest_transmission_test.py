@@ -1,3 +1,4 @@
+import json
 from requests import post
 
 
@@ -7,10 +8,10 @@ def crew_manifest_transmission_test(
 
     if min_chars == max_chars:
         prompt += (
-            f" Use exactly {min_chars} characters in the result part of your response."
+            f" Your entire JSON response must be exactly {min_chars} characters long."
         )
     else:
-        prompt += f" Use between {min_chars} and {max_chars} characters in the result part of your response."
+        prompt += f" Your entire JSON response must be between {min_chars} and {max_chars} characters long."
 
     req = post("http://localhost:3000/process", json={"prompt": prompt})
 
@@ -24,12 +25,16 @@ def crew_manifest_transmission_test(
     try:
         resp = req.json()
         print(resp)
-        result = resp["text"]
+        result_text = resp["text"]
         type_ = resp["type"]
+        # Re-serialise exactly as the agent would produce it to measure true length
+        response_json = json.dumps(resp, separators=(", ", ": "))
+        response_len = len(response_json)
+        length_ok = min_chars <= response_len <= max_chars
         return (
             type_ == "speak_text"
-            and expected_result.lower() in result.lower()
-            and (len(result) >= min_chars and len(result) <= max_chars)
+            and expected_result.lower() in result_text.lower()
+            and length_ok
         )
     except:
         return False
@@ -47,8 +52,8 @@ if __name__ == "__main__":
             crew_manifest_transmission_test(
                 prompt="Speak which company the crew member co-founded.",
                 expected_result="Arise Industries",
-                min_chars=20,
-                max_chars=20,
+                min_chars=50,
+                max_chars=50,
             ),
         )
     )

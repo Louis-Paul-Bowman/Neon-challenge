@@ -41,12 +41,15 @@ Output format (pick one):
 Always respond with valid JSON only, do not include any explanation, reasoning, or text outside the JSON object.
 
 Length rules for speak_text (obey any constraint stated in the prompt):
-- "exactly N characters" → text must be exactly N characters
-- "between X and Y characters" → text length must be in [X, Y]
-- "at least N characters" → text length must be >= N
-- "no more than N" / "at most N characters" → text length must be <= N
-- Hard maximum: 256 characters regardless of other constraints
-Craft your answer to naturally fit within the required length.
+IMPORTANT: length constraints apply to the ENTIRE JSON response string, not just
+the answer text. The envelope {"type": "speak_text", "text": ""} is 30 characters,
+so your answer text budget = constraint - 30.
+- "exactly N characters" → entire JSON must be exactly N characters (text = N - 30 chars)
+- "between X and Y characters" → entire JSON length must be in [X, Y]
+- "at least N characters" → entire JSON length must be >= N
+- "no more than N" / "at most N characters" → entire JSON length must be <= N
+- Hard maximum: 256 characters for the entire JSON response
+Craft your answer text to naturally fit within the budget (constraint - 30).
 
 Memory / recall rules:
 - Your previous JSON responses are visible in the conversation history.
@@ -132,13 +135,24 @@ def _parse_length_constraint(prompt: str) -> tuple[int | None, int | None]:
     return min_len, max_len
 
 
+# Overhead of the speak_text JSON envelope: {"type": "speak_text", "text": ""}
+_JSON_ENVELOPE_OVERHEAD = len('{"type": "speak_text", "text": ""}')  # 34 chars
+
+
 def _coerce_length(text: str, min_len: int | None, max_len: int | None) -> str:
-    """Truncate or space-pad text to satisfy length constraints."""
-    hard_max = min(max_len, 256) if max_len is not None else 256
-    if len(text) > hard_max:
-        text = text[:hard_max]
-    if min_len is not None and len(text) < min_len:
-        text = text.ljust(min_len)
+    """Truncate or space-pad text so the full JSON response satisfies length constraints.
+
+    Constraints are for the entire JSON string, so we subtract the envelope overhead
+    to get the effective text budget.
+    """
+    hard_max_json = min(max_len, 256) if max_len is not None else 256
+    text_max = hard_max_json - _JSON_ENVELOPE_OVERHEAD
+    if len(text) > text_max:
+        text = text[:text_max]
+    if min_len is not None:
+        text_min = min_len - _JSON_ENVELOPE_OVERHEAD
+        if len(text) < text_min:
+            text = text.ljust(text_min)
     return text
 
 
