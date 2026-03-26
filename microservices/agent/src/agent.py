@@ -171,7 +171,8 @@ def process_prompt(prompt: str, thread_id: str | None = None) -> dict:
         [
             SystemMessage(content=FORMAT_SYSTEM_PROMPT),
             HumanMessage(content=context),
-        ]
+        ],
+        config=config,
     )
 
     result = json.loads(format_response.content)
