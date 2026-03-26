@@ -3,7 +3,7 @@ services:
     container_name: llm
     image: llm:debug
     environment:
-      - OLLAMA_MODEL=qwen2.5:3b
+      - OLLAMA_MODEL=qwen2.5:7b
     ports:
       - "11434:11434"
     volumes:
@@ -24,7 +24,7 @@ services:
       - "3000:3000"
     environment:
       - LLM_BASE_URL=http://llm:11434
-      - OLLAMA_MODEL=qwen2.5:3b
+      - OLLAMA_MODEL=qwen2.5:7b
       - BACKEND_URL=http://backend:4000
     depends_on:
       - llm

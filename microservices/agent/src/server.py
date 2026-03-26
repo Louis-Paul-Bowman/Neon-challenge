@@ -20,6 +20,6 @@ def process(req: PromptRequest):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 3000))
     llm_url = os.environ.get("LLM_BASE_URL", "http://llm:11434")
-    model = os.environ.get("OLLAMA_MODEL", "qwen2.5:3b")
+    model = os.environ.get("OLLAMA_MODEL", "qwen2.5:7b")
     print(f"LLM: {llm_url}  model: {model}")
     uvicorn.run(app, host="0.0.0.0", port=port)

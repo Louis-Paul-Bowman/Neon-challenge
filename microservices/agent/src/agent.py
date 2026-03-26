@@ -11,7 +11,7 @@ logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
 logger = logging.getLogger("Agent")
 
 LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "http://llm:11434")
-MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5:3b")
+MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5:7b")
 BACKEND_URL = os.environ.get("BACKEND_URL", "http://backend:4000")
 
 VESSEL_CODE = "32ebf047628f89ab"
@@ -30,6 +30,7 @@ Rules:
 - All other responses → {"type": "speak_text", "text": "<answer>"}  (max 256 characters)"""
 
 # --- Tools -------------------------------------------------------------------
+
 
 @tool
 def eval_math_expression(expression: str) -> float:
@@ -70,6 +71,7 @@ def _is_handshake(prompt: str) -> bool:
 
 # --- Agent loop --------------------------------------------------------------
 
+
 def process_prompt(prompt: str) -> dict:
     if _is_handshake(prompt):
         return {"type": "enter_digits", "digits": VESSEL_CODE}
@@ -91,9 +93,11 @@ def process_prompt(prompt: str) -> dict:
 
     # Dedicated formatting step: gives the formatter the original prompt plus
     # the full tool conversation so it has all context to produce correct JSON.
-    format_response = formatter_llm.invoke([
-        SystemMessage(content=FORMAT_SYSTEM_PROMPT),
-        *messages,
-    ])
+    format_response = formatter_llm.invoke(
+        [
+            SystemMessage(content=FORMAT_SYSTEM_PROMPT),
+            *messages,
+        ]
+    )
 
     return json.loads(format_response.content)
