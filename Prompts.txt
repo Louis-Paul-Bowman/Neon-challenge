@@ -20,3 +20,4 @@ The agent is not correctly fetching previous conversations when a thread_id para
 The memory context is still not being correctly persisted / passed to the formatter. Try removing the seperate formatting step and having the original LLM call format the answer directly. Change system prompts, and simplify the agent logic where appropriate.
 Add a master test to the tests directory that calls all other tests.
 The agent responds correctly with json most of the time, but not all the time. Add in a backup functionality that re-tries if the output fails to output correct json, or asks it to re-format its answer in the correct format.
+Implement a functionality to connect our agent to Neon via websocket at "wss://neonhealth.software/agent-puzzle/challenge". Add a max turns param so that it doesn't get stuck in an infinite loop if we receive error respones.
