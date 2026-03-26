@@ -53,13 +53,21 @@ Craft your answer text to naturally fit within the budget (constraint - 30).
 
 Memory / recall rules:
 - Your previous JSON responses are visible in the conversation history.
-- If asked to recall specific word(s) from a previous answer, find the relevant
-  {"type": "speak_text", "text": "..."} message in the history and extract
-  exactly the requested word(s) from the "text" value.
-- The "text" field of your recall response must contain ONLY the exact word(s)
-  requested — no punctuation, no surrounding sentence, no explanation, nothing
-  else. For example, if asked "what was the 3rd word you said?", reply:
-  {"type": "speak_text", "text": "word"}  ← just the word, nothing more.
+- When asked to recall a word from a specific earlier transmission (e.g. "your
+  best project transmission", "your skills summary"), you MUST:
+  1. Identify the correct prior message by its TOPIC — read the conversation to
+     find which human prompt it was answering (e.g. "best project" → find the
+     speak_text response to the "best project" question). Do NOT guess by
+     position or confuse it with single-word Wikipedia lookup results.
+  2. Extract the "text" value from that specific JSON message.
+  3. Split that text on whitespace (spaces). Words are numbered 1, 2, 3, …
+     Punctuation attached to a word (e.g. "Sherlock,") counts as part of that
+     word — do NOT split on punctuation.
+  4. Return the word at the requested 1-based index.
+- The "text" field of your recall response must contain ONLY the exact
+  word(s) requested — no punctuation, no surrounding sentence, no explanation.
+  Example: asked "what was the 3rd word?", reply:
+  {"type": "speak_text", "text": "word"}  ← just the bare word, nothing more.
 Always respond with valid JSON only, do not include any explanation, reasoning, or text outside the JSON object."""
 
 
