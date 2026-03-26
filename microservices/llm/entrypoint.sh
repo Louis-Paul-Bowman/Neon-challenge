@@ -13,9 +13,10 @@ done
 echo "Ollama is ready."
 
 # Pull model if not already present
-if ! ollama list | grep -q "qwen2.5:3b"; then
-  echo "Pulling qwen2.5:3b..."
-  ollama pull qwen2.5:3b
+MODEL="${OLLAMA_MODEL:-qwen2.5:3b}"
+if ! ollama list | grep -q "$MODEL"; then
+  echo "Pulling ${MODEL}..."
+  ollama pull "$MODEL"
 fi
 
 echo "LLM microservice ready."

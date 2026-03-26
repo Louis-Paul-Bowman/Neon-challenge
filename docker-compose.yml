@@ -1,6 +1,8 @@
 services:
   llm:
     build: ./microservices/llm
+    environment:
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen2.5:3b}
     ports:
       - "11434:11434"
     volumes:
