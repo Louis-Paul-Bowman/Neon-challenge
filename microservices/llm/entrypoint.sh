@@ -13,7 +13,6 @@ done
 echo "Ollama is ready."
 
 # Pull model if not already present
-MODEL="${OLLAMA_MODEL:-qwen2.5:3b}"
 if ! ollama list | grep -q "$MODEL"; then
   echo "Pulling ${MODEL}..."
   ollama pull "$MODEL"

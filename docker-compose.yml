@@ -2,17 +2,11 @@ services:
   llm:
     build: ./microservices/llm
     environment:
-      - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen2.5:3b}
+      - OLLAMA_MODEL=qwen2.5:3b
     ports:
       - "11434:11434"
     volumes:
       - ollama_data:/root/.ollama
-    healthcheck:
-      test: ["CMD", "ollama", "list"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
 
 volumes:
   ollama_data:
