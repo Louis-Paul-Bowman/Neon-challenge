@@ -13,3 +13,5 @@ Implement the backend tool for querying Wikipedia: Add a new endpoint to the bac
 This endpoint should then retrieve the text of the Wikipedia article with the corresponding title from the Wikipedia REST endpoint at /page/summary/{title}, split it into individual words, and return the word at position x (i.e., index x-1).
 Add the Wikipedia tool end-point to the agent microservice.
 Add "Crew Manifest Transmissions" functionality to the agent: Add a tool which returns this plaintext CV data for this task. Ensure the model respects content length restrictions, add this to the prompt and add a validator / coercion (truncate / pad).
+Add "Transmission verification" functionality to the agent: Add in-memory storage mechanism from LangChain. Update the input schema to take an optional thread_id (uuid4) param to enable recall.
+Use the LangChain native MemorySaver checkpointer instead of homerolling the memory. Also, you can save all previous messages, not just the manifest task ones.

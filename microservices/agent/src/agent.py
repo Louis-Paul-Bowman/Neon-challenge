@@ -1,12 +1,15 @@
 import json
 import os
 import re
+import uuid
 import logging
 
 from requests import post, get
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langchain_core.tools import tool
+from langgraph.prebuilt import create_react_agent
+from langgraph.checkpoint.memory import MemorySaver
 
 from Docs import PLAINTEXT_CV
 
@@ -41,7 +44,6 @@ Craft your answer to naturally fit within the required length."""
 
 # --- Tools -------------------------------------------------------------------
 
-
 @tool
 def eval_math_expression(expression: str) -> float:
     """Evaluate a mathematical expression. Pass the expression EXACTLY as given
@@ -57,12 +59,8 @@ def eval_math_expression(expression: str) -> float:
 def get_wikipedia_word(title: str, position: int) -> str:
     """Fetch the word at a given position (1-indexed) from a Wikipedia article summary.
     Use the article title exactly as mentioned in the prompt."""
-    logger.debug(
-        "get_wikipedia_word called with: title=%s position=%d", title, position
-    )
-    resp = get(
-        f"{BACKEND_URL}/wiki", params={"title": title, "position": position}, timeout=10
-    )
+    logger.debug("get_wikipedia_word called with: title=%s position=%d", title, position)
+    resp = get(f"{BACKEND_URL}/wiki", params={"title": title, "position": position}, timeout=10)
     resp.raise_for_status()
     return resp.json()["result"]
 
@@ -76,10 +74,14 @@ def get_cv() -> str:
 
 
 TOOLS = [eval_math_expression, get_wikipedia_word, get_cv]
-TOOLS_BY_NAME = {t.name: t for t in TOOLS}
 
-llm = ChatAnthropic(model=MODEL).bind_tools(TOOLS)
+# --- Agent -------------------------------------------------------------------
+
+llm = ChatAnthropic(model=MODEL)
 formatter_llm = ChatAnthropic(model=MODEL)
+
+memory = MemorySaver()
+agent = create_react_agent(llm, TOOLS, checkpointer=memory, state_modifier=TOOL_SYSTEM_PROMPT)
 
 # --- Handshake (Task A) ------------------------------------------------------
 
@@ -100,7 +102,6 @@ def _is_handshake(prompt: str) -> bool:
 
 # --- Length coercion (Task D) ------------------------------------------------
 
-
 def _parse_length_constraint(prompt: str) -> tuple[int | None, int | None]:
     """Return (min_len, max_len) parsed from the prompt. Either may be None."""
     lower = prompt.lower()
@@ -114,9 +115,7 @@ def _parse_length_constraint(prompt: str) -> tuple[int | None, int | None]:
         return int(between.group(1)), int(between.group(2))
 
     min_match = re.search(r"at\s+least\s+(\d+)\s+characters?", lower)
-    max_match = re.search(
-        r"(?:no\s+more\s+than|at\s+most)\s+(\d+)\s+characters?", lower
-    )
+    max_match = re.search(r"(?:no\s+more\s+than|at\s+most)\s+(\d+)\s+characters?", lower)
     min_len = int(min_match.group(1)) if min_match else None
     max_len = int(max_match.group(1)) if max_match else None
     return min_len, max_len
@@ -134,54 +133,38 @@ def _coerce_length(text: str, min_len: int | None, max_len: int | None) -> str:
 
 # --- Agent loop --------------------------------------------------------------
 
-
-def process_prompt(prompt: str) -> dict:
+def process_prompt(prompt: str, thread_id: str | None = None) -> dict:
     if _is_handshake(prompt):
         return {"type": "enter_digits", "digits": VESSEL_CODE}
 
-    messages = [SystemMessage(content=TOOL_SYSTEM_PROMPT), HumanMessage(content=prompt)]
+    # Each call without a thread_id gets an isolated session so it never
+    # inherits history from other stateless calls.
+    config = {"configurable": {"thread_id": thread_id or str(uuid.uuid4())}}
 
-    # Tool-calling loop: keep going until the LLM stops issuing tool calls.
-    while True:
-        response = llm.invoke(messages)
-        messages.append(response)
+    state = agent.invoke({"messages": [HumanMessage(content=prompt)]}, config=config)
 
-        if not response.tool_calls:
-            break
+    # Extract tool results from the current turn (messages after the last
+    # HumanMessage) to give the formatter accurate context.
+    messages = state["messages"]
+    last_human_idx = max(i for i, m in enumerate(messages) if isinstance(m, HumanMessage))
+    current_tool_results = [m for m in messages[last_human_idx:] if isinstance(m, ToolMessage)]
 
-        for tc in response.tool_calls:
-            result = TOOLS_BY_NAME[tc["name"]].invoke(tc["args"])
-            logger.debug("Tool %s returned: %s", tc["name"], result)
-            messages.append(ToolMessage(content=str(result), tool_call_id=tc["id"]))
-
-    # Dedicated formatting step — build a fresh conversation ending with a
-    # HumanMessage (Claude requires this) containing the original prompt and
-    # all tool results as context.
-    tool_results = [m for m in messages if isinstance(m, ToolMessage)]
     context = f"Original prompt: {prompt}"
-    if tool_results:
-        results_str = "\n".join(f"- {m.content}" for m in tool_results)
+    if current_tool_results:
+        results_str = "\n".join(f"- {m.content}" for m in current_tool_results)
         context += f"\n\nTool results:\n{results_str}"
 
-    format_response = formatter_llm.invoke(
-        [
-            SystemMessage(content=FORMAT_SYSTEM_PROMPT),
-            HumanMessage(content=context),
-        ]
-    )
+    format_response = formatter_llm.invoke([
+        SystemMessage(content=FORMAT_SYSTEM_PROMPT),
+        HumanMessage(content=context),
+    ])
 
     result = json.loads(format_response.content)
 
-    # Coerce speak_text length to satisfy any constraints stated in the prompt.
     if result.get("type") == "speak_text":
         min_len, max_len = _parse_length_constraint(prompt)
         if min_len is not None or max_len is not None:
             result["text"] = _coerce_length(result["text"], min_len, max_len)
-            logger.debug(
-                "Coerced text length to %d (min=%s max=%s)",
-                len(result["text"]),
-                min_len,
-                max_len,
-            )
+            logger.debug("Coerced text length to %d (min=%s max=%s)", len(result["text"]), min_len, max_len)
 
     return result

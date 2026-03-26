@@ -1,5 +1,6 @@
 langchain-anthropic
 langchain-core
+langgraph
 fastapi
 uvicorn
 requests
