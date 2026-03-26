@@ -4,3 +4,4 @@ langgraph
 fastapi
 uvicorn
 requests
+pydantic
