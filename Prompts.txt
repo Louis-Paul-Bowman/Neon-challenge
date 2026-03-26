@@ -18,3 +18,4 @@ Use the LangChain native MemorySaver checkpointer instead of homerolling the mem
 TypeError: create_react_agent() got unexpected keyword arguments: {'state_modifier': 'You are an AI agent responding to mission control (NEON).\nYou have access to tools. Use them when needed, then stop calling tools once you have the answer.'}
 The agent is not correctly fetching previous conversations when a thread_id param is passed.
 The memory context is still not being correctly persisted / passed to the formatter. Try removing the seperate formatting step and having the original LLM call format the answer directly. Change system prompts, and simplify the agent logic where appropriate.
+Add a master test to the tests directory that calls all other tests.
