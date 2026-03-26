@@ -52,8 +52,8 @@ if __name__ == "__main__":
             crew_manifest_transmission_test(
                 prompt="Speak which company the crew member co-founded.",
                 expected_result="Arise Industries",
-                min_chars=50,
-                max_chars=50,
+                min_chars=55,
+                max_chars=55,
             ),
         )
     )
