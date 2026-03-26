@@ -8,6 +8,8 @@ from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langchain_core.tools import tool
 
+from Docs import PLAINTEXT_CV
+
 logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
 logger = logging.getLogger("Agent")
 
@@ -15,27 +17,6 @@ MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-6")
 BACKEND_URL = os.environ.get("BACKEND_URL", "http://backend:4000")
 
 VESSEL_CODE = "32ebf047628f89ab"
-
-# --- CV ----------------------------------------------------------------------
-# TODO: Replace with real CV content.
-CV = """
-Name: Jane Doe
-Email: jane.doe@email.com
-
-SUMMARY
-Software engineer with 5 years of experience building web applications.
-
-EXPERIENCE
-Co-founded a Canadian startup called Arise Industries.
-Worked as a senior engineer at Acme Corp from 2019 to 2022.
-Led a team of 4 engineers delivering a real-time data pipeline.
-
-EDUCATION
-B.Sc. Computer Science, University of Toronto, 2018.
-
-SKILLS
-Python, JavaScript, TypeScript, React, Node.js, PostgreSQL, Docker, AWS.
-"""
 
 # --- Prompts -----------------------------------------------------------------
 
@@ -60,6 +41,7 @@ Craft your answer to naturally fit within the required length."""
 
 # --- Tools -------------------------------------------------------------------
 
+
 @tool
 def eval_math_expression(expression: str) -> float:
     """Evaluate a mathematical expression. Pass the expression EXACTLY as given
@@ -75,8 +57,12 @@ def eval_math_expression(expression: str) -> float:
 def get_wikipedia_word(title: str, position: int) -> str:
     """Fetch the word at a given position (1-indexed) from a Wikipedia article summary.
     Use the article title exactly as mentioned in the prompt."""
-    logger.debug("get_wikipedia_word called with: title=%s position=%d", title, position)
-    resp = get(f"{BACKEND_URL}/wiki", params={"title": title, "position": position}, timeout=10)
+    logger.debug(
+        "get_wikipedia_word called with: title=%s position=%d", title, position
+    )
+    resp = get(
+        f"{BACKEND_URL}/wiki", params={"title": title, "position": position}, timeout=10
+    )
     resp.raise_for_status()
     return resp.json()["result"]
 
@@ -86,7 +72,7 @@ def get_cv() -> str:
     """Return the crew member's CV / biographical data. Use this to answer any
     questions about the crew member's background, experience, skills, or history."""
     logger.debug("get_cv called")
-    return CV
+    return PLAINTEXT_CV
 
 
 TOOLS = [eval_math_expression, get_wikipedia_word, get_cv]
@@ -114,20 +100,23 @@ def _is_handshake(prompt: str) -> bool:
 
 # --- Length coercion (Task D) ------------------------------------------------
 
+
 def _parse_length_constraint(prompt: str) -> tuple[int | None, int | None]:
     """Return (min_len, max_len) parsed from the prompt. Either may be None."""
     lower = prompt.lower()
-    exact = re.search(r'exactly\s+(\d+)\s+characters?', lower)
+    exact = re.search(r"exactly\s+(\d+)\s+characters?", lower)
     if exact:
         n = int(exact.group(1))
         return n, n
 
-    between = re.search(r'between\s+(\d+)\s+and\s+(\d+)\s+characters?', lower)
+    between = re.search(r"between\s+(\d+)\s+and\s+(\d+)\s+characters?", lower)
     if between:
         return int(between.group(1)), int(between.group(2))
 
-    min_match = re.search(r'at\s+least\s+(\d+)\s+characters?', lower)
-    max_match = re.search(r'(?:no\s+more\s+than|at\s+most)\s+(\d+)\s+characters?', lower)
+    min_match = re.search(r"at\s+least\s+(\d+)\s+characters?", lower)
+    max_match = re.search(
+        r"(?:no\s+more\s+than|at\s+most)\s+(\d+)\s+characters?", lower
+    )
     min_len = int(min_match.group(1)) if min_match else None
     max_len = int(max_match.group(1)) if max_match else None
     return min_len, max_len
@@ -144,6 +133,7 @@ def _coerce_length(text: str, min_len: int | None, max_len: int | None) -> str:
 
 
 # --- Agent loop --------------------------------------------------------------
+
 
 def process_prompt(prompt: str) -> dict:
     if _is_handshake(prompt):
@@ -173,10 +163,12 @@ def process_prompt(prompt: str) -> dict:
         results_str = "\n".join(f"- {m.content}" for m in tool_results)
         context += f"\n\nTool results:\n{results_str}"
 
-    format_response = formatter_llm.invoke([
-        SystemMessage(content=FORMAT_SYSTEM_PROMPT),
-        HumanMessage(content=context),
-    ])
+    format_response = formatter_llm.invoke(
+        [
+            SystemMessage(content=FORMAT_SYSTEM_PROMPT),
+            HumanMessage(content=context),
+        ]
+    )
 
     result = json.loads(format_response.content)
 
@@ -185,6 +177,11 @@ def process_prompt(prompt: str) -> dict:
         min_len, max_len = _parse_length_constraint(prompt)
         if min_len is not None or max_len is not None:
             result["text"] = _coerce_length(result["text"], min_len, max_len)
-            logger.debug("Coerced text length to %d (min=%s max=%s)", len(result["text"]), min_len, max_len)
+            logger.debug(
+                "Coerced text length to %d (min=%s max=%s)",
+                len(result["text"]),
+                min_len,
+                max_len,
+            )
 
     return result
