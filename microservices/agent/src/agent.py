@@ -160,6 +160,45 @@ def decode_message(request: PromptRequest) -> str:
     return request.prompt
 
 
+# --- JSON extraction / retry -------------------------------------------------
+
+_REFORMAT_MSG = (
+    "Your previous response was not valid JSON. "
+    "Reply with ONLY a single JSON object in one of these two forms — no other text:\n"
+    '  {"type": "enter_digits", "digits": "<string>"}\n'
+    '  {"type": "speak_text", "text": "<string>"}'
+)
+
+_MAX_RETRIES = 2
+
+
+def _extract_json(text: str) -> dict:
+    """Parse JSON from text, tolerating a leading/trailing code fence."""
+    text = text.strip()
+    # Strip optional ```json ... ``` fences
+    if text.startswith("```"):
+        text = text.split("```")[1]
+        if text.startswith("json"):
+            text = text[4:]
+        text = text.strip()
+    return json.loads(text)
+
+
+def _parse_json_with_retry(content: str, config: dict) -> dict:
+    """Try to parse JSON from content; on failure nudge the agent and retry."""
+    for attempt in range(_MAX_RETRIES + 1):
+        try:
+            return _extract_json(content)
+        except (json.JSONDecodeError, ValueError):
+            if attempt == _MAX_RETRIES:
+                logger.error("All %d JSON parse attempts failed. Last response: %s", _MAX_RETRIES + 1, content)
+                raise
+            logger.warning("Attempt %d: invalid JSON, asking agent to reformat. Response was: %s", attempt + 1, content)
+            state = agent.invoke({"messages": [HumanMessage(content=_REFORMAT_MSG)]}, config=config)
+            content = state["messages"][-1].content
+            logger.debug("Retry %d agent response: %s", attempt + 1, content)
+
+
 # --- Agent loop --------------------------------------------------------------
 
 
@@ -182,7 +221,7 @@ def process_prompt(request: PromptRequest) -> dict:
     final_content = state["messages"][-1].content
     logger.debug("Agent raw response: %s", final_content)
 
-    result = json.loads(final_content)
+    result = _parse_json_with_retry(final_content, config)
 
     if result.get("type") == "speak_text":
         min_len, max_len = _parse_length_constraint(prompt)

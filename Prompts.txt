@@ -19,3 +19,4 @@ TypeError: create_react_agent() got unexpected keyword arguments: {'state_modifi
 The agent is not correctly fetching previous conversations when a thread_id param is passed.
 The memory context is still not being correctly persisted / passed to the formatter. Try removing the seperate formatting step and having the original LLM call format the answer directly. Change system prompts, and simplify the agent logic where appropriate.
 Add a master test to the tests directory that calls all other tests.
+The agent responds correctly with json most of the time, but not all the time. Add in a backup functionality that re-tries if the output fails to output correct json, or asks it to re-format its answer in the correct format.
