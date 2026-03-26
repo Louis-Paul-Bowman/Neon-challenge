@@ -9,6 +9,7 @@ import websocket
 
 from agent import process_prompt
 from schemas import PromptRequest
+from utils import decode_message
 
 logger = logging.getLogger("NeonClient")
 
@@ -43,9 +44,14 @@ def run(max_turns: int = DEFAULT_MAX_TURNS) -> None:
             prompt = parsed.get("message")
 
             request = PromptRequest(type=type_, prompt=prompt, thread_id=thread_id)
+
+            unscrambled = decode_message(request)
+
+            print("Received message:\n", unscrambled)
+
             response = process_prompt(request)
         except Exception:
-            logger.exception("Failed to process message: %s", raw)
+            logger.exception("Failed to process message: %s", unscrambled)
             ws.close()
             return
 

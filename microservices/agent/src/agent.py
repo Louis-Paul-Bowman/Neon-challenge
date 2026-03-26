@@ -12,10 +12,12 @@ from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.memory import MemorySaver
 
 from schemas import PromptRequest
+from utils import decode_message
 from Docs import PLAINTEXT_CV
 
-logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
+logging.basicConfig(level=logging.WARNING, handlers=[logging.StreamHandler()])
 logger = logging.getLogger("Agent")
+logger.setLevel(logging.DEBUG)
 
 MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-6")
 BACKEND_URL = os.environ.get("BACKEND_URL", "http://backend:4000")
@@ -138,16 +140,6 @@ def _coerce_length(text: str, min_len: int | None, max_len: int | None) -> str:
     if min_len is not None and len(text) < min_len:
         text = text.ljust(min_len)
     return text
-
-
-# --- Input unscrambling ------------------------------------------------------
-
-
-def decode_message(request: PromptRequest) -> str:
-    if request.type == "challenge" and isinstance(request.prompt, list):
-        words = sorted(request.prompt, key=lambda w: w.timestamp)
-        return " ".join(w.word for w in words)
-    return request.prompt
 
 
 # --- JSON extraction / retry -------------------------------------------------
