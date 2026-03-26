@@ -53,6 +53,40 @@ app.post('/eval', (req, res) => {
   }
 });
 
+// GET /wiki?title=<string>&position=<int> → { "word": "<string>" }
+app.get('/wiki', async (req, res) => {
+  const { title, position } = req.query;
+
+  if (!title || typeof title !== 'string') {
+    return res.status(400).json({ error: 'title is required' });
+  }
+
+  const pos = parseInt(position, 10);
+  if (!Number.isInteger(pos) || pos < 1) {
+    return res.status(400).json({ error: 'position must be a positive integer' });
+  }
+
+  try {
+    const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      return res.status(502).json({ error: `Wikipedia returned ${response.status} for "${title}"` });
+    }
+
+    const data = await response.json();
+    const words = data.extract.split(/\s+/);
+    const index = pos - 1;
+
+    if (index >= words.length) {
+      return res.status(422).json({ error: `Position ${pos} out of range (article has ${words.length} words)` });
+    }
+
+    res.json({ word: words[index] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Backend microservice listening on port ${PORT}`);
 });
