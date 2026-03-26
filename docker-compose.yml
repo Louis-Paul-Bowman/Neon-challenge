@@ -7,5 +7,17 @@ services:
       - "11434:11434"
     volumes:
       - ollama_data:/root/.ollama
+
+  agent:
+    container_name: agent
+    build: ./microservices/agent
+    ports:
+      - "3000:3000"
+    environment:
+      - LLM_BASE_URL=http://llm:11434
+      - OLLAMA_MODEL=qwen2.5:3b
+    depends_on:
+      - llm
+
 volumes:
   ollama_data:

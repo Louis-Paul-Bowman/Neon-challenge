@@ -10,7 +10,7 @@
 If the local model does not work well, we can try a more powerful paid model i.e. OpenAI / Anthropic.
 
 3. Create the beginning agent microservice.
-3.1 Stand up a basic LangChain agent and connect it to our LLM microservice.
+3.1 Stand up a basic python LangChain agent and connect it to our LLM microservice. Make our agent reachable via FastAPI server.
 3.2 Implement the "Signal handshake and verification" task.
 3.2.1 Neon will verify our identity and credentials. It will ask us to respond on a specific frequency or enter the vessel authorization code.
 We must respond with our code "32ebf047628f89ab" in the enter digits format i.e. { "type": "enter_digits", "digits": "32ebf047628f89ab" } .

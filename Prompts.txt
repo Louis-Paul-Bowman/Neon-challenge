@@ -1,2 +1,3 @@
 Stand up the LLM microservice using the instructions in the plan section 2.
 Tweak the llm dockerfile, entrypoint, and docker-compose to support changing the model via environment variable set in the docker compose.
+Stand up a basic python LangChain agent and connect it to our LLM microservice. Make our agent reachable via FastAPI server.
