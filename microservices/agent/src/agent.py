@@ -13,14 +13,36 @@ llm = ChatOllama(
     format="json",
 )
 
+VESSEL_CODE = "32ebf047628f89ab"
+
 SYSTEM_PROMPT = """You are an AI agent responding to mission control (NEON).
 Every response MUST be a single JSON object with a "type" field. No other text outside the JSON.
 Valid response formats:
 - {"type": "enter_digits", "digits": "<string>"}  — use for numeric/keypad responses
 - {"type": "speak_text", "text": "<string>"}       — use for voice responses, max 256 characters"""
 
+# Task A: Signal handshake — always the first checkpoint.
+# Neon asks us to respond on a frequency or enter the vessel authorization code.
+# This is deterministic and must never be delegated to the LLM.
+_HANDSHAKE_KEYWORDS = (
+    "authorization code",
+    "vessel",
+    "handshake",
+    "frequency",
+    "credentials",
+    "identification",
+)
+
+
+def _is_handshake(prompt: str) -> bool:
+    lower = prompt.lower()
+    return any(kw in lower for kw in _HANDSHAKE_KEYWORDS)
+
 
 def process_prompt(prompt: str) -> dict:
+    if _is_handshake(prompt):
+        return {"type": "enter_digits", "digits": VESSEL_CODE}
+
     response = llm.invoke([
         SystemMessage(content=SYSTEM_PROMPT),
         HumanMessage(content=prompt),
