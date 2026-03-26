@@ -81,7 +81,7 @@ llm = ChatAnthropic(model=MODEL)
 formatter_llm = ChatAnthropic(model=MODEL)
 
 memory = MemorySaver()
-agent = create_react_agent(llm, TOOLS, checkpointer=memory, state_modifier=TOOL_SYSTEM_PROMPT)
+agent = create_react_agent(llm, TOOLS, checkpointer=memory, prompt=TOOL_SYSTEM_PROMPT)
 
 # --- Handshake (Task A) ------------------------------------------------------
 
