@@ -6,7 +6,7 @@ import logging
 
 from requests import post, get
 from langchain_anthropic import ChatAnthropic
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
+from langchain_core.messages import HumanMessage
 from langchain_core.tools import tool
 from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.memory import MemorySaver
@@ -21,26 +21,29 @@ BACKEND_URL = os.environ.get("BACKEND_URL", "http://backend:4000")
 
 VESSEL_CODE = "32ebf047628f89ab"
 
-# --- Prompts -----------------------------------------------------------------
+# --- System prompt -----------------------------------------------------------
 
-TOOL_SYSTEM_PROMPT = """You are an AI agent responding to mission control (NEON).
-You have access to tools. Use them when needed, then stop calling tools once you have the answer."""
+SYSTEM_PROMPT = """You are an AI agent responding to mission control (NEON).
 
-FORMAT_SYSTEM_PROMPT = """You are formatting a response for mission control (NEON).
-Respond with ONLY a single JSON object — no other text before or after it.
+Use the available tools to answer each question, then reply with ONLY a single
+JSON object — no other text before or after it.
 
-Response format rules:
-- Math / calculation results → {"type": "enter_digits", "digits": "<result as string>"}
-  If the original prompt said "followed by the pound key", append # to the digits value.
-- All other responses → {"type": "speak_text", "text": "<answer>"}
+Output format (pick one):
+- Math / calculation result → {"type": "enter_digits", "digits": "<result as string>"}
+  If the prompt says "followed by the pound key", append # to the digits value.
+- All other answers → {"type": "speak_text", "text": "<answer>"}
 
-Length rules for speak_text (the prompt may specify constraints):
+Length rules for speak_text (obey any constraint stated in the prompt):
 - "exactly N characters" → text must be exactly N characters
 - "between X and Y characters" → text length must be in [X, Y]
 - "at least N characters" → text length must be >= N
 - "no more than N" / "at most N characters" → text length must be <= N
 - Hard maximum: 256 characters regardless of other constraints
-Craft your answer to naturally fit within the required length."""
+Craft your answer to naturally fit within the required length.
+
+Memory: your previous JSON responses are visible in the conversation history.
+If asked to recall a specific word from a previous answer, look at the "text"
+field of the relevant earlier {"type": "speak_text", ...} message."""
 
 # --- Tools -------------------------------------------------------------------
 
@@ -82,11 +85,13 @@ TOOLS = [eval_math_expression, get_wikipedia_word, get_cv]
 
 # --- Agent -------------------------------------------------------------------
 
-llm = ChatAnthropic(model=MODEL)
-formatter_llm = ChatAnthropic(model=MODEL)
-
 memory = MemorySaver()
-agent = create_react_agent(llm, TOOLS, checkpointer=memory, prompt=TOOL_SYSTEM_PROMPT)
+agent = create_react_agent(
+    ChatAnthropic(model=MODEL),
+    TOOLS,
+    checkpointer=memory,
+    prompt=SYSTEM_PROMPT,
+)
 
 # --- Handshake (Task A) ------------------------------------------------------
 
@@ -152,30 +157,12 @@ def process_prompt(prompt: str, thread_id: str | None = None) -> dict:
 
     state = agent.invoke({"messages": [HumanMessage(content=prompt)]}, config=config)
 
-    # Extract tool results from the current turn (messages after the last
-    # HumanMessage) to give the formatter accurate context.
-    messages = state["messages"]
-    last_human_idx = max(
-        i for i, m in enumerate(messages) if isinstance(m, HumanMessage)
-    )
-    current_tool_results = [
-        m for m in messages[last_human_idx:] if isinstance(m, ToolMessage)
-    ]
+    # The agent's final AIMessage is already persisted in MemorySaver under
+    # the thread_id, so Task E can recall it from conversation history.
+    final_content = state["messages"][-1].content
+    logger.debug("Agent raw response: %s", final_content)
 
-    context = f"Original prompt: {prompt}"
-    if current_tool_results:
-        results_str = "\n".join(f"- {m.content}" for m in current_tool_results)
-        context += f"\n\nTool results:\n{results_str}"
-
-    format_response = formatter_llm.invoke(
-        [
-            SystemMessage(content=FORMAT_SYSTEM_PROMPT),
-            HumanMessage(content=context),
-        ],
-        config=config,
-    )
-
-    result = json.loads(format_response.content)
+    result = json.loads(final_content)
 
     if result.get("type") == "speak_text":
         min_len, max_len = _parse_length_constraint(prompt)
@@ -187,14 +174,5 @@ def process_prompt(prompt: str, thread_id: str | None = None) -> dict:
                 min_len,
                 max_len,
             )
-
-    # Store the final formatted answer back into the agent's thread so Task E
-    # can recall words from previous Task D responses via the same thread_id.
-    if thread_id and result.get("type") == "speak_text":
-        agent.update_state(
-            config,
-            {"messages": [AIMessage(content=f"My response was: {result['text']}")]},
-        )
-        logger.debug("Stored formatted answer in thread %s", thread_id)
 
     return result
