@@ -87,13 +87,18 @@ def process_prompt(prompt: str) -> dict:
             logger.debug("Tool %s returned: %s", tc["name"], result)
             messages.append(ToolMessage(content=str(result), tool_call_id=tc["id"]))
 
-    # Dedicated formatting step: gives the formatter the original prompt plus
-    # the full tool conversation so it has all context to produce correct JSON.
-    format_response = formatter_llm.invoke(
-        [
-            SystemMessage(content=FORMAT_SYSTEM_PROMPT),
-            *messages,
-        ]
-    )
+    # Dedicated formatting step. Build a fresh human message with the original
+    # prompt and any tool results — Claude requires the conversation to end with
+    # a user message, so we cannot spread `messages` (ends with an AIMessage).
+    tool_results = [m for m in messages if isinstance(m, ToolMessage)]
+    context = f"Original prompt: {prompt}"
+    if tool_results:
+        results_str = "\n".join(f"- {m.content}" for m in tool_results)
+        context += f"\n\nTool results:\n{results_str}"
+
+    format_response = formatter_llm.invoke([
+        SystemMessage(content=FORMAT_SYSTEM_PROMPT),
+        HumanMessage(content=context),
+    ])
 
     return json.loads(format_response.content)
