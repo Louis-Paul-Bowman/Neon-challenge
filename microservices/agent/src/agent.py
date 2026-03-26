@@ -2,7 +2,7 @@ import json
 import os
 import logging
 
-from requests import post
+from requests import post, get
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langchain_core.tools import tool
@@ -42,7 +42,17 @@ def eval_math_expression(expression: str) -> float:
     return resp.json()["result"]
 
 
-TOOLS = [eval_math_expression]
+@tool
+def get_wikipedia_word(title: str, position: int) -> str:
+    """Fetch the word at a given position (1-indexed) from a Wikipedia article summary.
+    Use the article title exactly as mentioned in the prompt."""
+    logger.debug("get_wikipedia_word called with: title=%s position=%d", title, position)
+    resp = get(f"{BACKEND_URL}/wiki", params={"title": title, "position": position}, timeout=10)
+    resp.raise_for_status()
+    return resp.json()["result"]
+
+
+TOOLS = [eval_math_expression, get_wikipedia_word]
 TOOLS_BY_NAME = {t.name: t for t in TOOLS}
 
 llm = ChatAnthropic(model=MODEL).bind_tools(TOOLS)

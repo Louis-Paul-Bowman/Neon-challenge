@@ -11,3 +11,4 @@ The local models are misbehaving, we can revisit them later. For now, change our
 anthropic.BadRequestError: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'This model does not support assistant message prefill. The conversation must end with a user message.'}, 'request_id': 'req_011CZS6NWZ4swptFub7EV68L'}
 Implement the backend tool for querying Wikipedia: Add a new endpoint to the backend microservice which takes two inputs: a title (string) and position (int).
 This endpoint should then retrieve the text of the Wikipedia article with the corresponding title from the Wikipedia REST endpoint at /page/summary/{title}, split it into individual words, and return the word at position x (i.e., index x-1).
+Add the Wikipedia tool end-point to the agent microservice.
