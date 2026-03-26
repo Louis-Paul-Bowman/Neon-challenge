@@ -12,3 +12,4 @@ anthropic.BadRequestError: Error code: 400 - {'type': 'error', 'error': {'type':
 Implement the backend tool for querying Wikipedia: Add a new endpoint to the backend microservice which takes two inputs: a title (string) and position (int).
 This endpoint should then retrieve the text of the Wikipedia article with the corresponding title from the Wikipedia REST endpoint at /page/summary/{title}, split it into individual words, and return the word at position x (i.e., index x-1).
 Add the Wikipedia tool end-point to the agent microservice.
+Add "Crew Manifest Transmissions" functionality to the agent: Add a tool which returns this plaintext CV data for this task. Ensure the model respects content length restrictions, add this to the prompt and add a validator / coercion (truncate / pad).
