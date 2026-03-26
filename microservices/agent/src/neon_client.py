@@ -39,8 +39,10 @@ def run(max_turns: int = DEFAULT_MAX_TURNS) -> None:
 
         try:
             parsed = json.loads(raw)
+            type_ = parsed.get("type")
+            prompt = parsed.get("message")
 
-            request = PromptRequest(**parsed, thread_id=thread_id)
+            request = PromptRequest(type=type_, prompt=prompt, thread_id=thread_id)
             response = process_prompt(request)
         except Exception:
             logger.exception("Failed to process message: %s", raw)
