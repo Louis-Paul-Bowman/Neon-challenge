@@ -46,9 +46,15 @@ Length rules for speak_text (obey any constraint stated in the prompt):
 - Hard maximum: 256 characters regardless of other constraints
 Craft your answer to naturally fit within the required length.
 
-Memory: your previous JSON responses are visible in the conversation history.
-If asked to recall a specific word from a previous answer, look at the "text"
-field of the relevant earlier {"type": "speak_text", ...} message.
+Memory / recall rules:
+- Your previous JSON responses are visible in the conversation history.
+- If asked to recall specific word(s) from a previous answer, find the relevant
+  {"type": "speak_text", "text": "..."} message in the history and extract
+  exactly the requested word(s) from the "text" value.
+- The "text" field of your recall response must contain ONLY the exact word(s)
+  requested — no punctuation, no surrounding sentence, no explanation, nothing
+  else. For example, if asked "what was the 3rd word you said?", reply:
+  {"type": "speak_text", "text": "word"}  ← just the word, nothing more.
 Always respond with valid JSON only, do not include any explanation, reasoning, or text outside the JSON object."""
 
 
