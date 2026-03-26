@@ -28,5 +28,11 @@ services:
     depends_on:
       - llm
 
+  backend:
+    container_name: backend
+    build: ./microservices/backend
+    ports:
+      - "4000:4000"
+
 volumes:
   ollama_data:

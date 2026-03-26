@@ -3,3 +3,4 @@ Tweak the llm dockerfile, entrypoint, and docker-compose to support changing the
 Stand up a basic python LangChain agent and connect it to our LLM microservice. Make our agent reachable via FastAPI server.
 Implement the "Signal handshake and verification" task: Neon will verify our identity and credentials. It will ask us to respond on a specific frequency or enter the vessel authorization code. We must respond with our code "32ebf047628f89ab" in the enter digits format i.e. { "type": "enter_digits", "digits": "32ebf047628f89ab" } .
 Mount in NVIDIA GPU in the docker compose for the llm service.
+Implement the backend tool for evaluating mathematical expressions. 1 Create a basic JS server. 2 Implement an API route which takes a string input to evaluate. 2.1 Perform basic validation on the input to avoid remote code execution exploits. 2.2 Evaluate the expression and return the result. 3 Create a dockerfile for the microservice and update the docker compose file.
