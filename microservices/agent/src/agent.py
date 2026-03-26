@@ -1,7 +1,7 @@
 import json
 import os
 
-import requests as http
+from requests import post
 from langchain_ollama import ChatOllama
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langchain_core.tools import tool
@@ -20,11 +20,12 @@ Valid response formats:
 
 # --- Tools -------------------------------------------------------------------
 
+
 @tool
 def eval_math_expression(expression: str) -> float:
     """Evaluate a mathematical expression containing numbers, +, -, *, /, %,
     parentheses, and Math.floor. Returns the numeric result."""
-    resp = http.post(f"{BACKEND_URL}/eval", json={"expression": expression}, timeout=10)
+    resp = post(f"{BACKEND_URL}/eval", json={"expression": expression}, timeout=10)
     resp.raise_for_status()
     return resp.json()["result"]
 
@@ -52,7 +53,9 @@ def _is_handshake(prompt: str) -> bool:
     lower = prompt.lower()
     return any(kw in lower for kw in _HANDSHAKE_KEYWORDS)
 
+
 # --- Agent loop --------------------------------------------------------------
+
 
 def process_prompt(prompt: str) -> dict:
     if _is_handshake(prompt):
