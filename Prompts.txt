@@ -1,1 +1,2 @@
 Stand up the LLM microservice using the instructions in the plan section 2.
+Tweak the llm dockerfile, entrypoint, and docker-compose to support changing the model via environment variable set in the docker compose.
